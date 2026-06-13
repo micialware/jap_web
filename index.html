@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>JapLearn</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <h1>JapLearn</h1>
+        <p>Интервальные повторения японских слов</p>
+      </header>
+
+      <div id="page-container" class="app-content">
+        <!-- Страницы рендерятся сюда динамически -->
+      </div>
+
+      <nav id="app-nav" class="app-nav">
+        <button class="nav-btn active" data-page="words">📚 Слова</button>
+        <button class="nav-btn" data-page="sets">🗂️ Колоды</button>
+      </nav>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
