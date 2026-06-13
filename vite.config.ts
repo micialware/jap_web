@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
-    target: 'esnext',
+    target: 'es2020',
   },
   optimizeDeps: {
     exclude: ['wa-sqlite'],
@@ -13,5 +13,6 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
+    host: true
   },
 });

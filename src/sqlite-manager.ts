@@ -49,6 +49,7 @@ function initWorker(): Promise<void> {
         if (msg.ok) {
           pendingReq.resolve(msg.data);
         } else {
+          console.log(msg);
           pendingReq.reject(new Error(msg.error || 'Неизвестная ошибка Worker'));
         }
       }
