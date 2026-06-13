@@ -1,10 +1,12 @@
 import './style.css';
 import { initDB, closeDb, getDatabaseFile, replaceDatabaseFile } from './sqlite-manager.ts';
 import { uploadDatabase, downloadDatabase } from './sync.ts';
-import { getWordsForReview, getCardSets } from './db-manager.ts';
+import { getWordsForReview, getCardSets, getWordsAndStatsForSet } from './db-manager.ts';
 import type { CardSetRecord } from './db-manager.ts';
 import type { Word } from './db-manager.ts';
 import { SetOrderMode } from './algorithm.ts';
+import { TrainingPage } from './training.ts';
+import type { WordItem } from './training.ts';
 
 // ----- Конфигурация -----
 const API_BASE_URL = 'https://learning.micialware.ru';
@@ -12,7 +14,7 @@ const API_BASE_URL = 'https://learning.micialware.ru';
 // ----- Элементы UI -----
 const container = document.getElementById('page-container') as HTMLElement;
 const navBtns = document.querySelectorAll<HTMLButtonElement>('.nav-btn');
-let currentPage: 'words' | 'sets' = 'words';
+let currentPage: 'words' | 'sets' | 'training' = 'words';
 
 // ----- Вспомогательные функции -----
 
@@ -137,7 +139,6 @@ function renderSetsList(sets: CardSetRecord[]) {
     listEl.appendChild(li);
   }
 
-  // Выделяем первую
   const first = listEl.querySelector('li') as HTMLLIElement | null;
   if (first) {
     first.classList.add('selected');
@@ -148,7 +149,6 @@ function renderSetsList(sets: CardSetRecord[]) {
 }
 
 function showSetDetail(set: CardSetRecord, listItem: HTMLLIElement) {
-  // Обновляем выделение
   document.querySelectorAll('#sets-list li').forEach(el => el.classList.remove('selected'));
   listItem.classList.add('selected');
 
@@ -168,16 +168,92 @@ function showSetDetail(set: CardSetRecord, listItem: HTMLLIElement) {
       <option value="${SetOrderMode.FullRandom}">${SetOrderMode.FullRandom} — полная случайность</option>
     </select>
 
-    <button class="btn btn-primary" data-set-id="${set.id}">▶ Начать тренировку</button>
+    <button class="btn btn-primary btn-start-training" data-set-id="${set.id}">▶ Начать тренировку</button>
   `;
+}
+
+// ----- Тренировка -----
+
+async function startTraining(setId: number) {
+  const modeSelect = document.getElementById('mode-select') as HTMLSelectElement | null;
+  const mode = (modeSelect?.value as SetOrderMode) || SetOrderMode.Default;
+
+  // Получаем колоду
+  const sets = await getCardSets();
+  const set = sets.find(s => s.id === setId);
+  if (!set) {
+    setStatus('Колода не найдена', true);
+    return;
+  }
+
+  // Получаем слова и статистику
+  const { words, stats } = await getWordsAndStatsForSet(setId);
+  if (words.length === 0) {
+    setStatus('Нет слов для тренировки', true);
+    return;
+  }
+
+  const settings = {
+    id: set.id,
+    name: set.name,
+    forward: set.forward,
+    backward: set.backward,
+    filter: set.filter,
+    count: null,
+    worst_words_list: null,
+    open_mode: mode,
+  };
+
+  const wordItems: WordItem[] = words.map((w) => {
+    let parsed: Record<string, string> = {};
+    if (w.more) {
+      try { parsed = JSON.parse(w.more); } catch { /* ignore */ }
+    }
+    return {
+      id: w.id,
+      key: w.key,
+      value: w.value,
+      tags: w.tags,
+      more: parsed,
+      group_id: w.group_id,
+    };
+  });
+
+  const cardStats = stats.map((s) => ({
+    id: s.id,
+    word_id: s.word_id,
+    set_id: s.set_id,
+    last_open: s.last_opened * 1000,
+    score: s.score,
+  }));
+
+  // Показываем страницу тренировки
+  hideNav();
+  currentPage = 'training';
+
+  container.innerHTML = '<div id="training-root" style="flex:1;display:flex;flex-direction:column;"></div>';
+  const trainingRoot = document.getElementById('training-root') as HTMLElement;
+
+  new TrainingPage(
+    trainingRoot,
+    settings,
+    wordItems,
+    cardStats,
+    {
+      onFinish: () => {
+        showNav();
+        switchPage('sets');
+      },
+    },
+  );
 }
 
 // ----- Навигация -----
 
 function switchPage(page: 'words' | 'sets') {
   currentPage = page;
+  showNav();
 
-  // Обновляем активную кнопку
   navBtns.forEach(btn => {
     btn.classList.toggle('active', btn.dataset.page === page);
   });
@@ -189,6 +265,14 @@ function switchPage(page: 'words' | 'sets') {
     renderSetsPage();
     loadSets();
   }
+}
+
+function hideNav() {
+  document.getElementById('app-nav')!.style.display = 'none';
+}
+
+function showNav() {
+  document.getElementById('app-nav')!.style.display = 'flex';
 }
 
 async function loadWords() {
@@ -265,18 +349,26 @@ async function main() {
     // Навигация
     navBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        switchPage(btn.dataset.page as 'words' | 'sets');
+        if (currentPage !== 'training') {
+          switchPage(btn.dataset.page as 'words' | 'sets');
+        }
       });
     });
 
     // Стартовая страница
     switchPage('words');
 
-    // Глобальные обработчики кликов (для кнопок на динамических страницах)
+    // Глобальные обработчики
     container.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
       if (target.id === 'btnDownload') await onDownload();
       if (target.id === 'btnUpload') await onUpload();
+
+      const trainingBtn = target.closest('.btn-start-training');
+      if (trainingBtn) {
+        const setId = Number((trainingBtn as HTMLElement).dataset.setId);
+        await startTraining(setId);
+      }
     });
 
   } catch (err) {

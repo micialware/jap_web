@@ -402,3 +402,94 @@ body {
     max-height: 200px;
   }
 }
+
+/* ──── Страница тренировки ──── */
+
+.training-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+}
+
+.training-card {
+  flex: 1;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.training-content {
+  text-align: center;
+}
+
+.training-field {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-h);
+  padding: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.training-side {
+  padding: 0.5rem 0;
+}
+
+.training-side-back .training-field {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.training-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.75rem 0;
+}
+
+.training-actions {
+  padding: 0.75rem 0;
+}
+
+.training-vote {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.vote-btn {
+  font-size: 0.85rem;
+  padding: 0.75rem 0.5rem;
+}
+
+.vote-easy {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.vote-ok {
+  border-color: #ca8a04;
+  color: #ca8a04;
+}
+
+.vote-hard {
+  border-color: #ea580c;
+  color: #ea580c;
+}
+
+.vote-none {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  .vote-easy { color: #4ade80; border-color: #4ade80; }
+  .vote-ok { color: #facc15; border-color: #facc15; }
+  .vote-hard { color: #fb923c; border-color: #fb923c; }
+  .vote-none { color: #f87171; border-color: #f87171; }
+}
