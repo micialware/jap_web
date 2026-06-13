@@ -193,6 +193,8 @@ async function startTraining(setId: number) {
     return;
   }
 
+  console.log(`[Training] Запуск тренировки: ${words.length} слов, ${stats.length} записей статистики, режим: ${mode}`);
+
   const settings = {
     id: set.id,
     name: set.name,

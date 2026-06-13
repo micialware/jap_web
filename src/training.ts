@@ -11,11 +11,28 @@ export interface WordItem {
   group_id: number;
 }
 
-function getFieldValues(more: Record<string, string>, fields: string): string[] {
+/**
+ * Извлекает значения полей из слова.
+ * Сначала ищет в основных полях (key, value, tags),
+ * потом в more (JSON-словарь).
+ * Если поле не найдено — пропускается (возвращается пустая строка, фильтруется).
+ */
+function getWordFieldValues(word: WordItem, fields: string): string[] {
+  const directFields: Record<string, string> = {
+    key: word.key,
+    value: word.value,
+    tags: word.tags,
+  };
+
   return fields
     .split(/\s+/)
     .filter(Boolean)
-    .map((f) => more[f] || f);
+    .map((f) => {
+      if (f in directFields && directFields[f]) return directFields[f];
+      if (f in word.more && word.more[f]) return word.more[f];
+      return '';
+    })
+    .filter(Boolean);
 }
 
 export interface TrainingCallbacks {
@@ -28,6 +45,8 @@ export class TrainingPage {
   private words: WordItem[];
   private callbacks: TrainingCallbacks;
   private totalCards: number;
+  private forwardFields: string;
+  private backwardFields: string;
 
   constructor(
     container: HTMLElement,
@@ -39,6 +58,8 @@ export class TrainingPage {
     this.container = container;
     this.callbacks = callbacks;
     this.totalCards = stats.length;
+    this.forwardFields = settings.forward || 'key';
+    this.backwardFields = settings.backward || 'value';
 
     const wordData: WordData[] = words.map((w) => ({
       id: w.id,
@@ -55,13 +76,12 @@ export class TrainingPage {
   }
 
   private render(): void {
-    const current = this.cardSet.currentWordIndex;
     const total = this.totalCards;
 
     this.container.innerHTML = `
       <div class="training-header">
         <button id="btnTrainingBack" class="btn" style="flex:none; padding:0.4rem 0.8rem;">← Назад</button>
-        <span style="font-size:0.85rem;color:var(--text);">${current !== null ? current + 1 : 0} / ${total}</span>
+        <span style="font-size:0.85rem;color:var(--text);">слов: ${total}</span>
       </div>
       <div id="training-card" class="training-card">
         <div class="training-content" id="training-content">
@@ -83,11 +103,7 @@ export class TrainingPage {
     const word = this.words.find((w) => w.id === result.word.id);
     if (!word) return;
 
-    const settings = (this.cardSet as any).settings as CardSetSettings | undefined;
-    const forwardFields = settings?.forward || 'key';
-    const backwardFields = settings?.backward || 'value';
-
-    this.renderSide(word, forwardFields, backwardFields, false);
+    this.renderSide(word, this.forwardFields, this.backwardFields, false);
     this.renderActions(false);
   }
 
@@ -97,27 +113,33 @@ export class TrainingPage {
     backwardFields: string,
     showBack: boolean,
   ): void {
-    const more = word.more;
-
     const contentEl = document.getElementById('training-content');
     if (!contentEl) return;
 
     if (!showBack) {
-      const values = getFieldValues(more, forwardFields);
+      const values = getWordFieldValues(word, forwardFields);
+      if (values.length === 0) {
+        contentEl.innerHTML = '<div class="training-field" style="opacity:0.4;">Нет данных для отображения</div>';
+        return;
+      }
       contentEl.innerHTML = values
         .map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`)
         .join('');
     } else {
-      const fwdVals = getFieldValues(more, forwardFields);
-      const bwdVals = getFieldValues(more, backwardFields);
+      const fwdVals = getWordFieldValues(word, forwardFields);
+      const bwdVals = getWordFieldValues(word, backwardFields);
 
       contentEl.innerHTML = `
         <div class="training-side">
-          ${fwdVals.map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`).join('')}
+          ${fwdVals.length > 0
+            ? fwdVals.map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`).join('')
+            : '<div class="training-field" style="opacity:0.4;">—</div>'}
         </div>
         <div class="training-divider"></div>
         <div class="training-side training-side-back">
-          ${bwdVals.map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`).join('')}
+          ${bwdVals.length > 0
+            ? bwdVals.map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`).join('')
+            : '<div class="training-field" style="opacity:0.4;">—</div>'}
         </div>
       `;
     }
@@ -157,11 +179,7 @@ export class TrainingPage {
     const word = this.words[current];
     if (!word) return;
 
-    const settings = (this.cardSet as any).settings as CardSetSettings | undefined;
-    const forwardFields = settings?.forward || 'key';
-    const backwardFields = settings?.backward || 'value';
-
-    this.renderSide(word, forwardFields, backwardFields, true);
+    this.renderSide(word, this.forwardFields, this.backwardFields, true);
     this.renderActions(true);
   }
 
@@ -172,37 +190,16 @@ export class TrainingPage {
     if (current === null) return;
     const stat = this.cardSet.set[current];
 
-    try {
-      await updateCardStat(stat.id, stat.score, Math.floor(stat.last_open / 1000));
-    } catch (err) {
-      console.error('[Training] Ошибка сохранения:', err);
+    if (stat) {
+      try {
+        await updateCardStat(stat.id, stat.score, Math.floor(stat.last_open / 1000));
+      } catch (err) {
+        console.error('[Training] Ошибка сохранения:', err);
+      }
     }
 
-    if (current < this.totalCards - 1) {
-      this.renderCard();
-    } else {
-      this.finish();
-    }
-  }
-
-  private finish(): void {
-    this.container.innerHTML = `
-      <div class="training-header">
-        <button id="btnTrainingFinish" class="btn" style="flex:none; padding:0.4rem 0.8rem;">← Назад</button>
-      </div>
-      <div class="training-card" style="display:flex;align-items:center;justify-content:center;">
-        <div style="text-align:center;">
-          <div style="font-size:3rem;margin-bottom:1rem;">🎉</div>
-          <h2 style="margin:0;color:var(--text-h);">Тренировка завершена!</h2>
-          <p style="color:var(--text);">Все ${this.totalCards} карточек пройдены.</p>
-        </div>
-      </div>
-      <div class="training-actions"></div>
-    `;
-
-    document.getElementById('btnTrainingFinish')?.addEventListener('click', () => {
-      this.callbacks.onFinish();
-    });
+    // Бесконечная тренировка — всегда переходим к следующей карте
+    this.renderCard();
   }
 
   private escapeHtml(text: string): string {

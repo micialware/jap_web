@@ -26,6 +26,20 @@ export interface CardStatRecord {
 }
 
 /**
+ * Парсит last_opened из SQLite.
+ * SQLite может вернуть ISO-строку "2026-05-22 10:52:06.823259+00:00",
+ * хотя в схеме поле INTEGER. Приводим к unix timestamp (секунды).
+ */
+function parseLastOpened(value: any): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const ts = Date.parse(value);
+    if (!isNaN(ts)) return Math.floor(ts / 1000);
+  }
+  return Math.floor(Date.now() / 1000);
+}
+
+/**
  * Получает все колоды (card_set).
  */
 export async function getCardSets(): Promise<CardSetRecord[]> {
@@ -101,7 +115,7 @@ export async function getWordsAndStatsForSet(
     word_id: r[1],
     set_id: r[2],
     score: r[3],
-    last_opened: r[4],
+    last_opened: parseLastOpened(r[4]),
   }));
 
   return { words, stats };
@@ -115,8 +129,10 @@ export async function updateCardStat(
   score: number,
   lastOpened: number,
 ): Promise<void> {
+  // Убеждаемся, что score — число >= 1
+  const safeScore = Math.max(1, Math.round(score || 1));
   await executeVoid(
     `UPDATE card_stats SET score = ?, last_opened = ? WHERE id = ?`,
-    [score, lastOpened, statId],
+    [safeScore, lastOpened, statId],
   );
 }

@@ -56,7 +56,8 @@ export function calculatedScore(stat: CardStatistics): number {
   const diffMs = now - stat.last_open;
   const days = diffMs / (1000 * 60 * 60 * 24);
   const multiplier = Math.pow(FADE_PER_DAY, Math.max(0, days));
-  return stat.score * multiplier;
+  const v = stat.score * multiplier;
+  return v;
 }
 
 export function updateStatScore(stat: CardStatistics, status: WordOpenMode): void {
@@ -154,17 +155,25 @@ class SemiRandomSRSModule implements SRSModule {
   private initialized = false;
 
   next(set: { words: WordData[]; set: CardStatistics[] }): number {
+    const maxHistory = this.historyLen(set.set.length);
+
+    // Пробуем выбрать индекс не из истории (не более 100 попыток)
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const index = this.lastWeights.sample();
+      if (!this.history.includes(index) || maxHistory >= set.set.length) {
+        // Если история может вместить все слова — пропускаем проверку
+        if (this.history.length >= maxHistory) {
+          this.history.shift();
+        }
+        this.history.push(index);
+        return index;
+      }
+    }
+
+    // Fallback: если все индексы в истории, очищаем историю
+    this.history = [];
     const index = this.lastWeights.sample();
-
-    if (this.history.includes(index)) {
-      return this.next(set);
-    }
-
-    if (this.history.length >= this.historyLen(set.set.length)) {
-      this.history.shift();
-    }
     this.history.push(index);
-
     return index;
   }
 
@@ -178,11 +187,12 @@ class SemiRandomSRSModule implements SRSModule {
     const weights = set.set.map(
       (s) => Math.pow(100.0 / Math.max(0.1, calculatedScore(s)), 2.0) * 2.0,
     );
+
     this.lastWeights = new WeightedIndex(weights);
   }
 
   private historyLen(setLen: number): number {
-    return Math.min(MAX_HISTORY_LEN, Math.floor(setLen * MAX_HISTORY_LEN_PART));
+    return Math.min(MAX_HISTORY_LEN, Math.max(0, Math.floor(setLen * MAX_HISTORY_LEN_PART)));
   }
 }
 
