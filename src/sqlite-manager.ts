@@ -31,7 +31,10 @@ function initWorker(): Promise<void> {
   if (initPromise) return initPromise;
 
   initPromise = new Promise((resolve, reject) => {
-    worker = new DbWorker();
+    worker = new Worker(
+      new URL('./db-worker.ts', import.meta.url),
+      { type: 'module' } // <--- ЭТО КЛЮЧЕВОЙ ПАРАМЕТР, КОТОРЫЙ ЛЕЧИТ SAFAFI/iOS
+    );
 
     worker.onmessage = (e: MessageEvent) => {
       const msg = e.data;
@@ -49,7 +52,7 @@ function initWorker(): Promise<void> {
         if (msg.ok) {
           pendingReq.resolve(msg.data);
         } else {
-          console.log(msg);
+          console.log(msg)
           pendingReq.reject(new Error(msg.error || 'Неизвестная ошибка Worker'));
         }
       }

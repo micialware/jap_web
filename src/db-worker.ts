@@ -3,6 +3,10 @@
  * Воркер необходим, так как createSyncAccessHandle() доступен только в Worker'ах.
  */
 
+import { Factory } from 'wa-sqlite/src/sqlite-api.js';
+import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
+import ModuleConstructor from 'wa-sqlite/dist/wa-sqlite-async.mjs';
+
 let sqlite: any = null;
 let db: number | null = null;
 let vfs: any = null;
@@ -16,19 +20,13 @@ const OPEN_FLAGS = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
 async function init() {
   if (initialized) return;
 
-  const { Factory } = await import('wa-sqlite/src/sqlite-api.js');
-  const { OriginPrivateFileSystemVFS } = await import(
-    'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js'
-  );
-  const ModuleConstructor = (await import('wa-sqlite/dist/wa-sqlite-async.mjs')).default;
-
   const module = await ModuleConstructor();
   const api = Factory(module);
   sqlite = api;
 
   const opfsVfs = new OriginPrivateFileSystemVFS();
-  vfs = opfsVfs;
 
+  vfs = opfsVfs;
   const rc = api.vfs_register(opfsVfs, true);
   if (rc) {
     throw new Error(`Не удалось зарегистрировать OPFS VFS, код ${rc}`);
@@ -39,6 +37,7 @@ async function init() {
 
   initialized = true;
   self.postMessage({ type: 'ready', ok: true });
+
 }
 
 async function execSchema() {

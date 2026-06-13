@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
+import basicSsl from '@vitejs/plugin-basic-ssl'; // npm i -D @vitejs/plugin-basic-ssl
 
 export default defineConfig({
+    plugins: [basicSsl()], // Добавит локальный HTTPS
+
   build: {
-    target: 'es2020',
+    target: 'esnext',
   },
   optimizeDeps: {
     exclude: ['wa-sqlite'],
