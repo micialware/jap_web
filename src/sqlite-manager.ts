@@ -1,5 +1,3 @@
-import DbWorker from './db-worker.ts?worker';
-
 // ----- Прокси к Worker -----
 
 let worker: Worker | null = null;

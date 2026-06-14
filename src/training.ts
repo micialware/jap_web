@@ -103,6 +103,16 @@ export class TrainingPage {
     const word = this.words.find((w) => w.id === result.word.id);
     if (!word) return;
 
+    // Обновляем дату последнего открытия в БД
+    const stat = this.cardSet.set[this.cardSet.currentWordIndex!];
+    if (stat) {
+      const now = Math.floor(Date.now() / 1000);
+      stat.last_open = Date.now(); // обновляем в памяти из алгоритма
+      updateCardStat(stat.id, stat.score, now).catch((err) =>
+        console.error('[Training] Ошибка сохранения last_opened:', err),
+      );
+    }
+
     this.renderSide(word, this.forwardFields, this.backwardFields, false);
     this.renderActions(false);
   }
