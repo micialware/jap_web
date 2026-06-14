@@ -1,51 +1,49 @@
 import { defineConfig } from 'vite';
-import basicSsl from '@vitejs/plugin-basic-ssl'; // npm i -D @vitejs/plugin-basic-ssl
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-    plugins: [basicSsl(),
-          VitePWA({
-      registerType: 'autoUpdate', // Автоматически обновлять SW при изменении кода
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+  plugins: [
+    // basicSsl(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'Мое PWA Приложение',
-        short_name: 'Моё PWA',
-        description: 'Описание моего приложения, работающего оффлайн',
-        theme_color: '#ffffff',
+        name: 'JapLearn',
+        short_name: 'JapLearn',
+        description: 'Интервальные повторения японских слов',
+        theme_color: '#7c3aed',
         background_color: '#ffffff',
-        display: 'standalone', // Важно для открытия без интерфейса браузера
+        display: 'standalone',
+        orientation: 'portrait',
         scope: '/',
         start_url: '/',
-        // Иконки обязательны для iOS и Android. Минимум 192x192 и 512x512
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'icon-192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
+            src: 'icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable' // Для адаптивных иконок Android
-          }
-        ]
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
       },
       workbox: {
-        // Стратегия кэширования для оффлайн-работы
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Если пользователь оффлайн и переходит по роуту, отдаем index.html
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
         navigateFallback: '/index.html',
-        // Игнорируем запросы к API или внешним ресурсам, если они не должны кэшироваться
-        navigateFallbackDenylist: [/^\/api\//], 
-      }
-    })
-    ], // Добавит локальный HTTPS
+        navigateFallbackDenylist: [/^\/api\//],
+      },
+    }),
+  ],
 
   build: {
     target: 'esnext',
@@ -59,6 +57,7 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
-    host: true
+    host: true,
+    allowedHosts: ['jl.micialware.ru']
   },
 });

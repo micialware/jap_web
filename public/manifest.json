@@ -1,11 +1,12 @@
 {
-  "name": "Мое SQLite Приложение",
-  "short_name": "SQLite App",
-  "description": "Описание вашего приложения",
+  "name": "JapLearn",
+  "short_name": "JapLearn",
+  "description": "Интервальные повторения японских слов",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "theme_color": "#7c3aed",
   "icons": [
     {
       "src": "/icon-192.png",

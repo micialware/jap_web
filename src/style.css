@@ -36,13 +36,18 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
 }
 
 #app {
@@ -53,10 +58,14 @@ body {
   width: 100%;
   margin: 0 auto;
   padding: 0;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-header {
   padding: 1.5rem 1.25rem 0.5rem;
+  padding-top: calc(1.5rem + env(safe-area-inset-top));
   text-align: center;
 }
 
@@ -134,9 +143,10 @@ body {
   font-family: var(--sans);
   font-size: 0.9rem;
   font-weight: 600;
-  padding: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
+  min-height: 48px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--card-bg);
   color: var(--text-h);
   cursor: pointer;
@@ -145,6 +155,9 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .btn:hover {
@@ -154,6 +167,7 @@ body {
 
 .btn:active {
   transform: scale(0.97);
+  opacity: 0.9;
 }
 
 .btn:disabled {
@@ -180,6 +194,7 @@ body {
   background: var(--accent-light);
   color: var(--text);
   margin-top: auto;
+  min-height: 36px;
 }
 
 .status-bar.error {
@@ -194,6 +209,7 @@ body {
 
 .app-footer {
   padding: 1rem 1.25rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   text-align: center;
   font-size: 0.75rem;
   color: var(--text);
@@ -294,6 +310,7 @@ body {
   position: sticky;
   bottom: 0;
   z-index: 10;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-btn {
@@ -302,11 +319,14 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.75rem 0.5rem;
+  min-height: 52px;
   border: none;
   background: transparent;
   color: var(--text);
   cursor: pointer;
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .nav-btn.active {
@@ -337,12 +357,14 @@ body {
 }
 
 .sets-list li {
-  padding: 12px 14px;
+  padding: 14px 14px;
+  min-height: 48px;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
   transition: background 0.15s;
   font-weight: 500;
   color: var(--text-h);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sets-list li:last-child {
@@ -379,7 +401,8 @@ body {
 .sets-detail .mode-select {
   width: 100%;
   margin: 10px 0;
-  padding: 8px 10px;
+  padding: 10px;
+  min-height: 48px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
@@ -465,6 +488,7 @@ body {
 .vote-btn {
   font-size: 0.85rem;
   padding: 0.75rem 0.5rem;
+  min-height: 52px;
 }
 
 .vote-easy {
