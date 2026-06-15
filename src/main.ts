@@ -10,6 +10,7 @@ import type { WordItem } from './training.ts';
 
 // ----- Конфигурация -----
 const API_BASE_URL = 'https://learning.micialware.ru';
+const SYNC_ID_STORAGE_KEY = 'japlearn_sync_id';
 
 // ----- Элементы UI -----
 const container = document.getElementById('page-container') as HTMLElement;
@@ -39,7 +40,17 @@ function getSyncId(): string {
   const input = document.getElementById('syncId') as HTMLInputElement | null;
   const id = input?.value.trim();
   if (!id) throw new Error('Введите ID синхронизации');
+  // Сохраняем в localStorage
+  localStorage.setItem(SYNC_ID_STORAGE_KEY, id);
   return id;
+}
+
+function restoreSyncId(): void {
+  const saved = localStorage.getItem(SYNC_ID_STORAGE_KEY);
+  if (saved) {
+    const input = document.getElementById('syncId') as HTMLInputElement | null;
+    if (input) input.value = saved;
+  }
 }
 
 // ----- Рендеринг страниц -----
@@ -359,6 +370,9 @@ async function main() {
 
     // Стартовая страница
     switchPage('words');
+
+    // Восстанавливаем сохранённый ID синхронизации
+    restoreSyncId();
 
     // Глобальные обработчики
     container.addEventListener('click', async (e) => {
