@@ -95,16 +95,6 @@ function renderWordsList(words: Word[]) {
     let reading = word.key;
     let translation = word.value;
 
-    if (word.more) {
-      try {
-        const parsed = JSON.parse(word.more);
-        reading = parsed.reading || word.key;
-        translation = parsed.translation || word.value;
-      } catch {
-        // ignore
-      }
-    }
-
     li.innerHTML = `
       <span class="word-key">${reading}</span>
       <span class="word-value">${escapeHtml(translation)}</span>

@@ -1,4 +1,4 @@
-import { CardSet } from './algorithm.ts';
+import { CardSet, calculatedScore } from './algorithm.ts';
 import type { CardSetSettings, CardStatistics, WordData, WordOpenMode } from './algorithm.ts';
 import { updateCardStat } from './db-manager.ts';
 
@@ -11,12 +11,6 @@ export interface WordItem {
   group_id: number;
 }
 
-/**
- * Извлекает значения полей из слова.
- * Сначала ищет в основных полях (key, value, tags),
- * потом в more (JSON-словарь).
- * Если поле не найдено — пропускается (возвращается пустая строка, фильтруется).
- */
 function getWordFieldValues(word: WordItem, fields: string): string[] {
   const directFields: Record<string, string> = {
     key: word.key,
@@ -47,6 +41,8 @@ export class TrainingPage {
   private totalCards: number;
   private forwardFields: string;
   private backwardFields: string;
+  private seenWords = new Set<number>();
+  private shownCount = 0;
 
   constructor(
     container: HTMLElement,
@@ -81,7 +77,7 @@ export class TrainingPage {
     this.container.innerHTML = `
       <div class="training-header">
         <button id="btnTrainingBack" class="btn" style="flex:none; padding:0.4rem 0.8rem;">← Назад</button>
-        <span style="font-size:0.85rem;color:var(--text);">слов: ${total}</span>
+        <span style="font-size:0.85rem;color:var(--text);">уникальных: 0 / ${total}</span>
       </div>
       <div id="training-card" class="training-card">
         <div class="training-content" id="training-content">
@@ -98,22 +94,37 @@ export class TrainingPage {
     });
   }
 
+  private updateCounter(): void {
+    const total = this.totalCards;
+    const span = this.container.querySelector('.training-header span');
+    if (span) {
+      span.textContent = `уникальных: ${this.seenWords.size} / ${total}`;
+    }
+  }
+
   private renderCard(): void {
     const result = this.cardSet.next();
     const word = this.words.find((w) => w.id === result.word.id);
     if (!word) return;
 
-    // Обновляем дату последнего открытия в БД
+    this.shownCount++;
+
+    // Учитываем уникальные слова
+    if (!this.seenWords.has(result.word.id)) {
+      this.seenWords.add(result.word.id);
+    }
+    this.updateCounter();
+
     const stat = this.cardSet.set[this.cardSet.currentWordIndex!];
     if (stat) {
       const now = Math.floor(Date.now() / 1000);
-      stat.last_open = Date.now(); // обновляем в памяти из алгоритма
+      stat.last_open = Date.now();
       updateCardStat(stat.id, stat.score, now).catch((err) =>
         console.error('[Training] Ошибка сохранения last_opened:', err),
       );
     }
 
-    this.renderSide(word, this.forwardFields, this.backwardFields, false);
+    this.renderSide(word, this.forwardFields, this.backwardFields, false, stat);
     this.renderActions(false);
   }
 
@@ -122,19 +133,31 @@ export class TrainingPage {
     forwardFields: string,
     backwardFields: string,
     showBack: boolean,
+    stat?: CardStatistics,
   ): void {
     const contentEl = document.getElementById('training-content');
     if (!contentEl) return;
 
+    // Текущий балл слова (с учётом затухания)
+    let scoreStr = '';
+    if (stat) {
+      const cs = calculatedScore(stat);
+      scoreStr = `⚡ ${cs.toFixed(1)}`;
+    }
+
     if (!showBack) {
       const values = getWordFieldValues(word, forwardFields);
       if (values.length === 0) {
-        contentEl.innerHTML = '<div class="training-field" style="opacity:0.4;">Нет данных для отображения</div>';
+        contentEl.innerHTML = `
+          <div class="training-field" style="opacity:0.4;">Нет данных для отображения</div>
+          ${scoreStr ? `<div class="training-score">${scoreStr}</div>` : ''}
+        `;
         return;
       }
-      contentEl.innerHTML = values
-        .map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`)
-        .join('');
+      contentEl.innerHTML = `
+        ${values.map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`).join('')}
+        ${scoreStr ? `<div class="training-score">${scoreStr}</div>` : ''}
+      `;
     } else {
       const fwdVals = getWordFieldValues(word, forwardFields);
       const bwdVals = getWordFieldValues(word, backwardFields);
@@ -151,6 +174,7 @@ export class TrainingPage {
             ? bwdVals.map((v) => `<div class="training-field">${this.escapeHtml(v)}</div>`).join('')
             : '<div class="training-field" style="opacity:0.4;">—</div>'}
         </div>
+        ${scoreStr ? `<div class="training-score">${scoreStr}</div>` : ''}
       `;
     }
   }
@@ -189,7 +213,9 @@ export class TrainingPage {
     const word = this.words[current];
     if (!word) return;
 
-    this.renderSide(word, this.forwardFields, this.backwardFields, true);
+    const stat = this.cardSet.set[current];
+
+    this.renderSide(word, this.forwardFields, this.backwardFields, true, stat);
     this.renderActions(true);
   }
 

@@ -45,6 +45,7 @@ export async function uploadDatabase(
     console.log('[Sync] База данных успешно загружена.');
   } catch (err) {
     console.error('[Sync] Ошибка загрузки:', err);
+    console.log(err);
     alert(`Ошибка загрузки: ${err instanceof Error ? err.message : String(err)}`);
     throw err;
   }
@@ -67,6 +68,7 @@ export async function downloadDatabase(
   try {
     // 1. GET-запрос
     const url = `${apiBaseUrl.replace(/\/+$/, '')}/download/${encodeURIComponent(id)}`;
+    console.log(url);
     const response = await fetch(url);
 
     if (!response.ok) {
