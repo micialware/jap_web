@@ -15,12 +15,12 @@ export async function uploadDatabase(
   getDbBuffer: () => Promise<ArrayBuffer>,
 ): Promise<void> {
   try {
-    // 1. Закрываем соединение, чтобы снять блокировку файла OPFS
-    await closeDb();
-
-    // 2. Получаем бинарный файл БД
+    // 1. Получаем бинарный файл БД (Worker ещё жив)
     const dbBuffer = await getDbBuffer();
     const plainBytes = new Uint8Array(dbBuffer);
+
+    // 2. Закрываем соединение, чтобы снять блокировку файла OPFS
+    await closeDb();
 
     // 3. Сжимаем zstd
     await init();
