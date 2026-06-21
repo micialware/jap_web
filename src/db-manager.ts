@@ -9,6 +9,11 @@ export interface Word {
   group_id: number;
 }
 
+export interface WordGroup {
+  id: number;
+  name: string;
+}
+
 export interface CardSetRecord {
   id: number;
   name: string;
@@ -23,6 +28,16 @@ export interface CardStatRecord {
   set_id: number;
   score: number;
   last_opened: number;
+}
+
+export interface TagGroup {
+  tag: string;
+  words: Word[];
+}
+
+export interface GroupedWords {
+  group: WordGroup;
+  tags: TagGroup[];
 }
 
 /**
@@ -129,10 +144,64 @@ export async function updateCardStat(
   score: number,
   lastOpened: number,
 ): Promise<void> {
-  // Убеждаемся, что score — число >= 1
   const safeScore = Math.max(1, Math.round(score || 1));
   await executeVoid(
     `UPDATE card_stats SET score = ?, last_opened = ? WHERE id = ?`,
     [safeScore, lastOpened, statId],
   );
+}
+
+/**
+ * Возвращает все группы (word_group).
+ */
+export async function getWordGroups(): Promise<WordGroup[]> {
+  const rows: any[] = await execute(`
+    SELECT id, name FROM word_group ORDER BY id ASC
+  `);
+  return rows.map((r: any[]) => ({ id: r[0], name: r[1] })) as WordGroup[];
+}
+
+/**
+ * Группирует все слова по группам и тегам.
+ * Если у слова несколько тегов (через пробел), оно попадает в каждую теговую группу.
+ */
+export async function getGroupedWords(): Promise<GroupedWords[]> {
+  const groups = await getWordGroups();
+  const words = await getWordsForReview();
+
+  const result: GroupedWords[] = [];
+
+  for (const group of groups) {
+    const groupWords = words.filter((w) => w.group_id === group.id);
+
+    // Собираем все уникальные теги в этой группе
+    const tagMap = new Map<string, Word[]>();
+
+    for (const word of groupWords) {
+      if (!word.tags || word.tags.trim() === '') {
+        // Слова без тегов — в группу "без тега"
+        const tag = '(без тега)';
+        if (!tagMap.has(tag)) tagMap.set(tag, []);
+        tagMap.get(tag)!.push(word);
+        continue;
+      }
+
+      const tags = word.tags.split(',').map((t) => t.trim()).filter(Boolean);
+      for (const tag of tags) {
+        if (!tagMap.has(tag)) tagMap.set(tag, []);
+        tagMap.get(tag)!.push(word);
+      }
+    }
+
+    const tagEntries: TagGroup[] = [];
+    for (const [tag, tagWords] of tagMap) {
+      tagEntries.push({ tag, words: tagWords });
+    }
+    // Сортируем теги: сначала с наибольшим количеством слов
+    tagEntries.sort((a, b) => b.words.length - a.words.length);
+
+    result.push({ group, tags: tagEntries });
+  }
+
+  return result;
 }

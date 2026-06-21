@@ -1,9 +1,9 @@
 import './style.css';
 import { initDB, closeDb, getDatabaseFile, replaceDatabaseFile } from './sqlite-manager.ts';
 import { uploadDatabase, downloadDatabase } from './sync.ts';
-import { getWordsForReview, getCardSets, getWordsAndStatsForSet } from './db-manager.ts';
+import { getCardSets, getWordsAndStatsForSet, getGroupedWords } from './db-manager.ts';
+import type { GroupedWords } from './db-manager.ts';
 import type { CardSetRecord } from './db-manager.ts';
-import type { Word } from './db-manager.ts';
 import { SetOrderMode } from './algorithm.ts';
 import { TrainingPage } from './training.ts';
 import type { WordItem } from './training.ts';
@@ -40,7 +40,6 @@ function getSyncId(): string {
   const input = document.getElementById('syncId') as HTMLInputElement | null;
   const id = input?.value.trim();
   if (!id) throw new Error('Введите ID синхронизации');
-  // Сохраняем в localStorage
   localStorage.setItem(SYNC_ID_STORAGE_KEY, id);
   return id;
 }
@@ -70,37 +69,98 @@ function renderWordsPage() {
 
     <div class="card" style="flex: 1;">
       <h2 class="card-title">📚 Слова</h2>
-      <ul id="word-list" class="word-list"></ul>
+      <div id="word-groups"></div>
     </div>
 
     <div id="status" class="status-bar">Загрузка...</div>
   `;
 }
 
-function renderWordsList(words: Word[]) {
-  const wordListEl = document.getElementById('word-list') as HTMLUListElement | null;
-  if (!wordListEl) return;
+function renderWordGroups(grouped: GroupedWords[]) {
+  const containerEl = document.getElementById('word-groups');
+  if (!containerEl) return;
 
-  wordListEl.innerHTML = '';
+  containerEl.innerHTML = '';
 
-  if (words.length === 0) {
-    wordListEl.innerHTML = '<li class="word-item word-item-empty">Нет слов для повторения 🎉</li>';
+  if (grouped.length === 0) {
+    containerEl.innerHTML = '<p style="text-align:center;opacity:0.6;padding:1rem;">Нет слов 🎉</p>';
     return;
   }
 
-  for (const word of words) {
-    const li = document.createElement('li');
-    li.className = 'word-item';
+  for (const entry of grouped) {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'word-group';
 
-    let reading = word.key;
-    let translation = word.value;
-
-    li.innerHTML = `
-      <span class="word-key">${reading}</span>
-      <span class="word-value">${escapeHtml(translation)}</span>
-      ${word.tags ? `<span class="word-tags">${escapeHtml(word.tags)}</span>` : ''}
+    const header = document.createElement('div');
+    header.className = 'word-group-header';
+    header.innerHTML = `
+      <span class="word-group-name">${escapeHtml(entry.group.name)}</span>
+      <span class="word-group-count">${entry.tags.reduce((s, t) => s + t.words.length, 0)} слов</span>
     `;
-    wordListEl.appendChild(li);
+
+    // Коллапс по клику на заголовке
+    let collapsed = false;
+    header.addEventListener('click', () => {
+      collapsed = !collapsed;
+      tagsContainer.style.display = collapsed ? 'none' : '';
+      header.classList.toggle('collapsed', collapsed);
+    });
+
+    groupEl.appendChild(header);
+
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'word-group-tags';
+
+    for (const tagEntry of entry.tags) {
+      const tagBlock = document.createElement('div');
+      tagBlock.className = 'word-tag-block';
+
+      const tagHeader = document.createElement('div');
+      tagHeader.className = 'word-tag-header';
+      tagHeader.innerHTML = `
+        <span class="word-tag-label">#${escapeHtml(tagEntry.tag)}</span>
+        <span class="word-tag-count">${tagEntry.words.length}</span>
+      `;
+
+      let tagCollapsed = true;
+      const wordsContainer = document.createElement('div');
+      wordsContainer.className = 'word-tag-words';
+      wordsContainer.style.display = 'none';
+
+      tagHeader.addEventListener('click', () => {
+        tagCollapsed = !tagCollapsed;
+        wordsContainer.style.display = tagCollapsed ? 'none' : '';
+        tagHeader.classList.toggle('collapsed', tagCollapsed);
+      });
+
+      for (const word of tagEntry.words) {
+        const wordEl = document.createElement('div');
+        wordEl.className = 'word-item';
+
+        let reading = word.key;
+        let translation = word.value;
+        if (word.more) {
+          try {
+            const parsed = JSON.parse(word.more);
+            reading = parsed.reading || word.key;
+            translation = parsed.translation || word.value;
+          } catch { /* ignore */ }
+        }
+
+        wordEl.innerHTML = `
+          <span class="word-key">${escapeHtml(reading)}</span>
+          <span class="word-value">${escapeHtml(translation)}</span>
+        `;
+        wordsContainer.appendChild(wordEl);
+      }
+
+      tagBlock.appendChild(tagHeader);
+      tagBlock.appendChild(wordsContainer);
+      tagsContainer.appendChild(tagBlock);
+    }
+
+    groupEl.appendChild(tagsContainer);
+    containerEl.appendChild(groupEl);
   }
 }
 
@@ -179,7 +239,6 @@ async function startTraining(setId: number) {
   const modeSelect = document.getElementById('mode-select') as HTMLSelectElement | null;
   const mode = (modeSelect?.value as SetOrderMode) || SetOrderMode.Default;
 
-  // Получаем колоду
   const sets = await getCardSets();
   const set = sets.find(s => s.id === setId);
   if (!set) {
@@ -187,14 +246,13 @@ async function startTraining(setId: number) {
     return;
   }
 
-  // Получаем слова и статистику
   const { words, stats } = await getWordsAndStatsForSet(setId);
   if (words.length === 0) {
     setStatus('Нет слов для тренировки', true);
     return;
   }
 
-  console.log(`[Training] Запуск тренировки: ${words.length} слов, ${stats.length} записей статистики, режим: ${mode}`);
+  console.log(`[Training] Запуск тренировки: ${words.length} слов, ${stats.length} записей, режим: ${mode}`);
 
   const settings = {
     id: set.id,
@@ -230,7 +288,6 @@ async function startTraining(setId: number) {
     score: s.score,
   }));
 
-  // Показываем страницу тренировки
   hideNav();
   currentPage = 'training';
 
@@ -263,7 +320,7 @@ function switchPage(page: 'words' | 'sets') {
 
   if (page === 'words') {
     renderWordsPage();
-    loadWords();
+    loadGroupedWords();
   } else {
     renderSetsPage();
     loadSets();
@@ -278,12 +335,13 @@ function showNav() {
   document.getElementById('app-nav')!.style.display = 'flex';
 }
 
-async function loadWords() {
+async function loadGroupedWords() {
   try {
-    const words = await getWordsForReview();
-    renderWordsList(words);
-    const count = words.length;
-    setStatus(`Слов: ${count}`);
+    const grouped = await getGroupedWords();
+    renderWordGroups(grouped);
+
+    const totalWords = grouped.reduce((s, g) => s + g.tags.reduce((s2, t) => s2 + t.words.length, 0), 0);
+    setStatus(`Слов: ${totalWords}`);
   } catch (err) {
     setStatus('Ошибка загрузки слов', true);
     console.error(err);
@@ -312,7 +370,7 @@ async function onDownload() {
     setStatus('Скачивание...');
     await downloadDatabase(id, API_BASE_URL, replaceDatabaseFile, initDB);
 
-    if (currentPage === 'words') await loadWords();
+    if (currentPage === 'words') await loadGroupedWords();
     setStatus('База данных скачана.');
   } catch {
     // ошибка уже обработана в sync.ts
@@ -332,7 +390,7 @@ async function onUpload() {
     await uploadDatabase(id, API_BASE_URL, closeDb, getDatabaseFile);
 
     await initDB();
-    if (currentPage === 'words') await loadWords();
+    if (currentPage === 'words') await loadGroupedWords();
     setStatus('База данных загружена.');
   } catch {
     // ошибка уже обработана в sync.ts
@@ -349,7 +407,6 @@ async function main() {
     await initDB();
     console.log('[App] База данных инициализирована.');
 
-    // Навигация
     navBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         if (currentPage !== 'training') {
@@ -358,13 +415,9 @@ async function main() {
       });
     });
 
-    // Стартовая страница
     switchPage('words');
-
-    // Восстанавливаем сохранённый ID синхронизации
     restoreSyncId();
 
-    // Глобальные обработчики
     container.addEventListener('click', async (e) => {
       const target = e.target as HTMLElement;
       if (target.id === 'btnDownload') await onDownload();

@@ -300,6 +300,114 @@ body {
   opacity: 0.6;
 }
 
+/* ──── Группировка слов ──── */
+
+.word-group {
+  margin-bottom: 1rem;
+}
+
+.word-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+  min-height: 48px;
+}
+
+.word-group-header:hover {
+  background: var(--accent-light);
+}
+
+.word-group-header::after {
+  content: '▾';
+  font-size: 0.8rem;
+  color: var(--text);
+  transition: transform 0.2s;
+}
+
+.word-group-header.collapsed::after {
+  transform: rotate(-90deg);
+}
+
+.word-group-name {
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 0.95rem;
+}
+
+.word-group-count {
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-right: 0.5rem;
+}
+
+.word-group-tags {
+  padding-top: 0.5rem;
+}
+
+.word-tag-block {
+  margin-bottom: 0.5rem;
+}
+
+.word-tag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.word-tag-header:hover {
+  background: var(--accent-light);
+}
+
+.word-tag-header::after {
+  content: '▸';
+  font-size: 0.75rem;
+  color: var(--text);
+  transition: transform 0.2s;
+}
+
+.word-tag-header.collapsed::after {
+  transform: rotate(90deg);
+}
+
+.word-tag-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.word-tag-count {
+  font-size: 0.75rem;
+  color: var(--text);
+  background: var(--accent-light);
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+
+.word-tag-words {
+  padding: 0.25rem 0 0.25rem 0.5rem;
+}
+
+.word-tag-words .word-item {
+  margin-bottom: 6px;
+  padding: 10px 12px;
+}
+
+.word-tag-words .word-item:last-child {
+  margin-bottom: 0;
+}
+
 /* ──── Навигация ──── */
 
 .app-nav {
