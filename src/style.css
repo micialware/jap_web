@@ -300,55 +300,64 @@ body {
   opacity: 0.6;
 }
 
-/* ──── Группировка слов ──── */
+/* ──── Группировка слов (табы) ──── */
 
-.word-group {
-  margin-bottom: 1rem;
+.group-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.word-group-header {
+.group-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.group-tab {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.65rem 0.5rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-  min-height: 48px;
+  gap: 0.5rem;
 }
 
-.word-group-header:hover {
+.group-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
   background: var(--accent-light);
 }
 
-.word-group-header::after {
-  content: '▾';
-  font-size: 0.8rem;
-  color: var(--text);
-  transition: transform 0.2s;
+.group-tab-count {
+  font-size: 0.7rem;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 500;
+  margin-left: auto;
 }
 
-.word-group-header.collapsed::after {
-  transform: rotate(-90deg);
+.group-panel {
+  display: none;
+  padding-top: 0.75rem;
 }
 
-.word-group-name {
-  font-weight: 600;
-  color: var(--text-h);
-  font-size: 0.95rem;
-}
-
-.word-group-count {
-  font-size: 0.8rem;
-  color: var(--text);
-  margin-right: 0.5rem;
-}
-
-.word-group-tags {
-  padding-top: 0.5rem;
+.group-panel.active {
+  display: block;
 }
 
 .word-tag-block {

@@ -87,29 +87,27 @@ function renderWordGroups(grouped: GroupedWords[]) {
     return;
   }
 
-  for (const entry of grouped) {
-    const groupEl = document.createElement('div');
-    groupEl.className = 'word-group';
+  // Табы групп
+  const tabsContainer = document.createElement('div');
+  tabsContainer.className = 'group-tabs';
 
-    const header = document.createElement('div');
-    header.className = 'word-group-header';
-    header.innerHTML = `
-      <span class="word-group-name">${escapeHtml(entry.group.name)}</span>
-      <span class="word-group-count">${entry.tags.reduce((s, t) => s + t.words.length, 0)} слов</span>
-    `;
+  const panelsContainer = document.createElement('div');
+  panelsContainer.className = 'group-panels';
 
-    // Коллапс по клику на заголовке
-    let collapsed = false;
-    header.addEventListener('click', () => {
-      collapsed = !collapsed;
-      tagsContainer.style.display = collapsed ? 'none' : '';
-      header.classList.toggle('collapsed', collapsed);
-    });
+  let activeIndex = 0;
 
-    groupEl.appendChild(header);
+  for (let i = 0; i < grouped.length; i++) {
+    const entry = grouped[i];
 
-    const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'word-group-tags';
+    // Кнопка таба
+    const tabBtn = document.createElement('button');
+    tabBtn.className = 'group-tab' + (i === activeIndex ? ' active' : '');
+    const totalWords = entry.tags.reduce((s, t) => s + t.words.length, 0);
+    tabBtn.innerHTML = `${escapeHtml(entry.group.name)} <span class="group-tab-count">${totalWords}</span>`;
+
+    // Панель с тегами
+    const panel = document.createElement('div');
+    panel.className = 'group-panel' + (i === activeIndex ? ' active' : '');
 
     for (const tagEntry of entry.tags) {
       const tagBlock = document.createElement('div');
@@ -156,12 +154,24 @@ function renderWordGroups(grouped: GroupedWords[]) {
 
       tagBlock.appendChild(tagHeader);
       tagBlock.appendChild(wordsContainer);
-      tagsContainer.appendChild(tagBlock);
+      panel.appendChild(tagBlock);
     }
 
-    groupEl.appendChild(tagsContainer);
-    containerEl.appendChild(groupEl);
+    tabBtn.addEventListener('click', () => {
+      // Деактивируем все
+      tabsContainer.querySelectorAll('.group-tab').forEach((b) => b.classList.remove('active'));
+      panelsContainer.querySelectorAll('.group-panel').forEach((p) => p.classList.remove('active'));
+      // Активируем текущие
+      tabBtn.classList.add('active');
+      panel.classList.add('active');
+    });
+
+    tabsContainer.appendChild(tabBtn);
+    panelsContainer.appendChild(panel);
   }
+
+  containerEl.appendChild(tabsContainer);
+  containerEl.appendChild(panelsContainer);
 }
 
 function renderSetsPage() {
